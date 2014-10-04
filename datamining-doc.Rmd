@@ -1,0 +1,296 @@
+---
+title: "Algoritmos de clasificación en minería de datos"
+author: "David Charte"
+output:
+  pdf_document:
+    toc: yes
+---
+
+# Introducción a la minería de datos
+
+A día de hoy, se recopilan cantidades ingentes de datos en cada vez 
+menos tiempo. Fotografías tomadas en teléfonos y publicadas, 
+datos de estaciones meteorológicas, valores en bolsa, son simples
+ejemplos de la información que se produce constantemente y a la que
+queremos buscar un significado. Y mientras que algunos datos se
+podrán interpretar manualmente, para estudiar muchos otros conjuntos
+de datos necesitaremos de la ayuda de ordenadores y de la Ciencia
+de Datos. 
+
+En concreto, nos centraremos en la fase del análisis de los datos 
+en sí para buscar significados, conocida como Minería de Datos. Los 
+patrones que buscamos servirán para predecir el comportamiento de
+nuevas observaciones y explicar las relaciones entre las ya conocidas,
+además de para visualizar la información que se extrae y resumirla
+en medidas estadísticas.
+
+# Definiciones
+
+* **Característica/Atributo**: En general, se trata de un conjunto, no 
+  vacío, de posibles valores. Por ejemplo, 
+  $F_1 = \{Intel, AMD\}, F_2 = \mathbb{R}^+_0$.
+* **Espacio de características**: Es el producto cartesiano de las 
+  características. $F = F_1 \times F_2 \times \dots \times F_n$
+  para $F_1, \dots F_n$ características.
+* **Dataset**: Un subconjunto finito $D \subset F$ espacio de 
+  características.
+* **Instancia**: Cada $X \in D$ dataset.
+* **Clasificador**: Una función capaz de predecir los atributos
+  ausentes en nuevos datos.
+  $c : F_1\times F_2 \times \dots \times F_{m} \rightarrow F_{m+1} \times \dots \times F_n$
+* **Algoritmo de clasificación**: Un procedimiento que toma un dataset 
+  y genera un clasificador *entrenado* para el mismo. Esto significa
+  que el algoritmo encontrará posibles relaciones entre los atributos
+  de los datos, de forma que cuando tengamos un dato nuevo con
+  características ausentes, se le relacionará con unas instancias
+  u otras a partir del resto de atributos.
+
+# Problema de clasificación
+
+El problema al que nos enfrentamos consiste en, teniendo un dataset
+al que llamaremos *de entrenamiento*, generar un clasificador que 
+sea capaz de predecir, con la mayor precisión posible, una o más
+características de cualquier nueva instancia incompleta.
+
+Atendiendo al número de características que estarán ausentes en los
+nuevos datos, y a sus posibles valores, distinguiremos tres tipos
+de clasificación:
+
+* **Binaria**: Implica clasificar en 2 clases (generalmente 0 o 1, 
+  *Verdadero* o *falso*), utilizando una característica que tome 
+  solo dos valores.
+* **Multiclase**: Ahora habrá más de dos clases, pero cada instancia
+  pertenecerá a una y solo una de ellas, por lo que se usará
+  una característica que contenga tantos valores como clases.
+* **Multietiqueta**: En este caso cada instancia puede asociarse
+  a más de una etiqueta, por tanto se usarán tantos atributos
+  como etiquetas, cada uno de ellos conteniendo dos valores.
+
+## Clasificación binaria
+
+En clasificación binaria solo usaremos una característica para
+contener información de las clases, por lo que $m = n-1$, y como
+solo tendremos dos clases, tomaremos $F_n = \{0,1\}$.
+
+El siguiente es un ejemplo de gráfico generado a partir de las
+instancias del dataset `bupa`[^bupa], que tiene 7 atributos en total
+(se han escogido dos para los ejes y el atributo de clase está
+representado por el color):
+
+[^bupa]: UCI Machine Learning Repository - [http://archive.ics.uci.edu/ml/datasets/Liver+Disorders](http://archive.ics.uci.edu/ml/datasets/Liver+Disorders)
+
+```{r, echo=FALSE}
+bupa <- read.csv("datasets/bupa.csv",
+                 col.names = c("mcv", "alkphos", "sgpt", "sgot", "gammagt", "drinks", "selector"))
+plot(bupa$sgot, bupa$sgpt, col = bupa$selector + 1, pch = 20)
+```
+
+## Clasificación multiclase
+
+La clasificación multiclase añade la complejidad de que, en
+lugar de dos únicos valores para la característica que agrupa
+a las instancias, tendremos 3 o más. Esto significa que aunque
+$m$ se mantenga igual a $n-1$, tendremos $F_n = \{1,2,3\dots\}$.
+
+La nube de puntos siguiente representa los datos del conocido
+dataset `iris`[^iris], que cuenta con 5 atributos, el último de los
+cuales se utiliza para separarlos en 3 clases. De nuevo, se
+representan dos de los atributos y el color diferencia las
+clases:
+
+[^iris]: UCI Machine Learning Repository - [http://archive.ics.uci.edu/ml/datasets/Iris](http://archive.ics.uci.edu/ml/datasets/Iris)
+
+```{r, echo=F}
+plot(iris$Petal.Length, iris$Petal.Width, col = iris$Species, type = "p", pch = 20)
+```
+
+## Clasificación multietiqueta
+
+Una etiqueta se diferencia de una clase en que no es exclusiva,
+es decir, que una instancia puede pertenecer a varias 
+etiquetas a la vez. Esto implica que cada etiqueta puede estar
+activada o desactivada en todas las instancias, y por tanto
+necesitaremos tantas características como etiquetas: 
+$m = n - l \leq n$ para $l$ etiquetas. Cada atributo
+correspondiente a una etiqueta tendrá dos valores: 
+$F_{m+1} = \dots = F_n = \{0,1\}$.
+
+A continuación se muestran las etiquetas del dataset `emotions`
+obtenido del repositorio MULAN[^mulan]. Este dataset, aun
+siendo de los más pequeños entre los multietiqueta, cuenta con
+78 características, 6 de las cuales son etiquetas.
+
+```{r, echo=FALSE}
+# El paquete mldr no está disponible aún en CRAN.
+library(mldr)
+
+emotions <- mldr("datasets/emotions", use_xml = TRUE)
+emotions$labels[,c(2,4)]
+```
+
+Uno de los problemas que presenta la clasificación 
+multietiqueta es que suelen existir varias decenas de
+etiquetas, o incluso cientos (el dataset de MULAN con
+más etiquetas tiene 3993), aumentando significativamente la
+cantidad de información que un clasificador debe averiguar
+para cada dato nuevo. Además, es probable que se dé la 
+situación en que algunas etiquetas estén relacionadas entre
+sí. Un buen algoritmo de clasificación deberá tener esto
+en cuenta, y no tratar cada etiqueta por separado.
+
+[^mulan]:Multilabel datasets - [http://mulan.sourceforge.net/datasets-mlc.html](http://mulan.sourceforge.net/datasets-mlc.html)
+
+Transformación de problemas
+========================================================
+
+Las primeras estrategias a las que podemos recurrir cuando
+tratamos un problema de clasificación multiclase o 
+multietiqueta son las de transformación del mismo
+a problemas de clasificación binaria.
+
+Supondremos que disponemos de un algoritmo de clasificación
+binaria que entrenará clasificadores para varios conjuntos
+de datos.
+
+## Multiclase
+
+### One vs. All
+
+Consiste en entrenar un clasificador para cada clase, de forma
+que sea capaz de distinguir cuándo un dato nuevo tiene o no esa
+clase, y aportar un valor de confianza (probabilidad) del resultado. 
+Para decidir la clase que llevará un nuevo dato, se le aplican todos
+los clasificadores y se queda con la clase que tenga el mayor 
+valor de confianza:
+$$\phi_i : F \rightarrow F_1\times\dots\times F_{n-1}\times F_n^{(i)}$$
+$$\phi_i(x_1, x_2, \dots x_n) = (x_1, x_2, \dots, x_{n-1}, \delta_{i,x_n}) $$
+
+donde $\delta_{i,x_n}$ es la Delta de Kronecker para $i$ y $x_n$.
+Obtenemos clasificadores $c_i$ para $\phi_i(D)$, $\forall i \in F_n$,
+y generamos el clasificador completo:
+$$c: F_1\times \dots \times F_{n-1}\rightarrow F_n$$
+$$c(x) = \arg\!\max_{i\in F_n} con\!f(c_i(x))$$
+donde $con\!f(c_i(x))$ es la confianza del clasificador $c_i$ de que la 
+instancia $x$ pertenezca a la $i$-ésima clase.
+
+Una desventaja de esta estrategia es que al darle a cada clasificador
+todas las instancias, se desequilibran fácilmente las clases, ya que
+se le informará de una de las clases y el resto de las instancias
+aparecerán como de una única clase. Cuando esto suceda, el 
+clasificador podría dar siempre valores muy pobres de confianza.
+
+### One vs. One
+
+Para cada pareja de clases, se entrenará un clasificador que
+aprenda a distinguirlas. Para ello, se restringirá el dataset en
+cada caso a instancias de alguna de las dos clases que se vayan a 
+usar. En total se entrenarán $\frac{l(l-1)}{2}$
+clasificadores (para $l$ clases). De esta forma, cuando tengamos
+que decidir la clase de un nuevo dato, cada uno de los 
+clasificadores dará una de dos clases, y la clase más votada será
+la que se le asigne al dato.
+
+Uno de los problemas de esta estrategia es la posible ambigüedad
+cuando haya dos clases con el mismo número de votos y haya que
+decidir entre ellas. Además, cada clasificador que se entrene no
+dispondrá de todas las instancias, sino de la restricción a las
+dos clases elegidas, por lo que no será capaz de obtener toda la
+información.
+
+## Multietiqueta
+
+### Binary Relevance
+
+La idea de Binary Relevance es tratar cada etiqueta como un par de
+clases, y separar un problema de $l$ etiquetas en $l$ problemas de
+clasificación binaria, generando tantos clasificadores como 
+etiquetas tengamos:
+$$ c_i : F_1\times\dots\times F_m \rightarrow F_{m+i}\quad \forall i = 1, \dots l$$
+$$ c = (c_1, c_2, \dots c_l): F_1\times\dots\times F_m \rightarrow F_{m+1}\times\dots\times F_n$$
+
+El problema principal de esta estrategia es que no tiene en cuenta
+las relaciones entre las distintas etiquetas, por lo que el
+aprendizaje obtenido es menor.
+
+### Label Powerset
+
+Label Powerset pretende solventar el problema de Binary Relevance,
+estudiando en vez de cada etiqueta por separado, sus posibles
+combinaciones:
+$$ \forall L \in F_{m+1}\times\dots\times F_n,\quad F_L = \{0,1\} $$
+$$ \phi_L: F \rightarrow F_1\times \dots \times F_m \times F_L $$
+$$ \phi_L((x, L)) = (x, 1);\quad \phi_L((x, L')) = (x, 0) \forall L' \neq L$$
+
+Esta transformación de los datos nos deja una única característica,
+$F_L$, para averiguar, se trata de un problema binario. Con el dataset
+restringido a cada uno de esos espacios de características, 
+entrenaremos un clasificador (en total, $2^l$):
+$$ c_L : F_1\times\dots\times F_m \rightarrow F_L $$
+$$ c: F_1\times\dots\times F_m \rightarrow F_{m+1}\times\dots\times F_n $$
+$$ c(x) = \arg\!\max\limits_{L\in F_{m+1}\times\dots\times F_n} con\!f(c_L(x)) $$
+donde, de nuevo, $con\!f(c_L(x))$ será la confianza que dé el 
+clasificador correspondiente de que la instancia $x$ tenga la 
+combinación $L$ de etiquetas.
+
+Algoritmos de clasificación
+==========================================
+
+## K-nearest neighbor (kNN)
+
+El método de los $k$ vecinos más cercanos consiste en hallar
+los primeros $k$ puntos de $F_1\times\dots\times F_k$ a menor
+distancia (para cierta distancia $d$, generalmente la euclídea)
+del nuevo dato a clasificar. Una vez encontrados estos puntos,
+se le otorga al nuevo dato la clase de la mayoría (esquema de
+votación).
+
+En el caso $k=1$, se puede visualizar fácilmente el método
+mediante un diagrama de Voronoi, que divide el plano en
+regiones que identifican al punto más cercano:
+
+$\includegraphics[width=8cm,height=8cm]{knn_voronoi.png}$  
+Diagrama de Voronoi obtenido de [Scholarpedia](http://scholarpedia.org/article/K-nearest_neighbor) (CC BY-NC-SA)
+
+### Tipificación
+
+Generalmente en el espacio de características habrá atributos
+en distintas unidades de medida. Esto puede provocar un sesgo
+importante en el cálculo de la distancia entre los puntos, ya
+que algunos de los atributos tendrán más peso que otros. Para
+contrarrestar este efecto se tipifican las características, 
+es decir, a cada valor de la característica se le resta la 
+media de todos los valores del dataset y se divide el resultado 
+entre la desviación típica.
+
+### Distance-weighted kNN[^dudani]
+
+Con el objetivo de afinar más la elección de la clase para 
+nuevos datos, se le aplican pesos a los puntos más cercanos
+según la distancia a la que estén. Por tanto, la clase del 
+punto más cercano tendrá más importancia en la elección final
+que la del $k$-ésimo punto más cercano.
+
+[^dudani]: *The Distance-Weighted k-Nearest-Neighbor Rule* - Sahibsingh A. Dudani
+
+### ML-kNN[^mlknn]
+
+ML-kNN es una adaptación del algoritmo kNN para problemas de
+clasificación multietiqueta. En este método, una vez 
+localizados los $k$ puntos más cercanos a una instancia de
+test $T$, construimos un vector de cuentas como sigue. Si 
+$N(T) = \{X_1, X_2, \dots X_k\}$ son los vecinos más cercanos
+a $T$, definimos la cuenta:
+$$ C(T) = \sum\limits_{i\in\{1,\dots k\}} (x_{i\ m+1}, x_{i\ m+2}, \dots x_{i\ n})$$
+
+De esta forma obtenemos un vector de $l$ elementos para los
+cuales, cuanto mayor sea el valor, mayor es la confianza de
+que la instancia $T$ tenga las etiquetas asociadas. Para
+discriminar cuáles de las etiquetas se asignarán y cuáles
+no, ML-kNN utiliza una estimación *Maximum a posteriori*. 
+
+[^mlknn]: *ML-kNN: A Lazy Learning Approach to Multi-Label Learning* - Min-Ling Zhang, Zhi-Hua Zhou
+
+***
+[![CC BY-SA](ccbysa.png)](http://creativecommons.org/licenses/by-sa/4.0/)
+
+Esta obra se distribuye bajo una licencia [Creative Commons Atribución-CompartirIgual 4.0](http://creativecommons.org/licenses/by-sa/4.0/).
