@@ -15,14 +15,33 @@ ejemplos de la información que se produce constantemente y a la que
 queremos buscar un significado. Y mientras que algunos datos se
 podrán interpretar manualmente, para estudiar muchos otros conjuntos
 de datos necesitaremos de la ayuda de ordenadores y de la Ciencia
-de Datos. 
+de datos. 
 
-En concreto, nos centraremos en la fase del análisis de los datos 
-en sí para buscar significados, conocida como Minería de Datos. Los 
+Para extraer conocimiento de los datos se realiza el proceso de KDD,
+o *Knowledge Discovery in Databases*, que incluye generalmente las
+siguientes fases[^fayyad]:
+
+* Selección de un conjunto de datos a analizar
+* Preprocesamiento: limpieza de datos, eliminación de ruidos...
+* Transformación: reducir número de variables, transformación del problema...
+* Minería: búsqueda de patrones de interés
+* Interpretación y visualización
+
+[^fayyad]: Fayyad, Usama; Piatetsky-Shapiro, Gregory; Smyth, Padhraic - [From Data Mining to Knowledge Discovery in Databases](http://www.kdnuggets.com/gpspubs/aimag-kdd-overview-1996-Fayyad.pdf)
+
+Nos centraremos en la fase del análisis de los datos 
+en sí para buscar significados, conocida como Minería de datos. Los 
 patrones que buscamos servirán para predecir el comportamiento de
 nuevas observaciones y explicar las relaciones entre las ya conocidas,
 además de para visualizar la información que se extrae y resumirla
 en medidas estadísticas.
+
+La Minería de datos abarca distintos problemas, generalmente divididos
+en aprendizaje no supervisado (*clustering*, detección de anomalías, reglas
+de asociación) y aprendizaje supervisado (clasificación, regresión).
+Aquí estudiaremos el problema de clasificación, que consiste en aprender de
+un conjunto de datos ya clasificados para ser capaz de clasificar nuevos
+datos.
 
 # Definiciones
 
@@ -65,6 +84,11 @@ de clasificación:
 * **Multietiqueta**: En este caso cada instancia puede asociarse
   a más de una etiqueta, por tanto se usarán tantos atributos
   como etiquetas, cada uno de ellos conteniendo dos valores.
+  
+Adicionalmente, existe una generalización del problema de clasificación
+que reside en la clasificación **multidimensional**. En este tipo de
+clasificación, las características que se habrán de predecir serán
+de cualquier tipo, no necesariamente de dos valores.
 
 ## Clasificación binaria
 
@@ -289,6 +313,18 @@ discriminar cuáles de las etiquetas se asignarán y cuáles
 no, ML-kNN utiliza una estimación *Maximum a posteriori*. 
 
 [^mlknn]: *ML-kNN: A Lazy Learning Approach to Multi-Label Learning* - Min-Ling Zhang, Zhi-Hua Zhou
+
+## Árboles de decisión
+Binaria+multiclase
+
+## Máquina vectorial de soporte (SVM)
+Binaria
+
+## RAkEL
+Multietiqueta
+
+## HOMER
+Multietiqueta
 
 ***
 [![CC BY-SA](ccbysa.png)](http://creativecommons.org/licenses/by-sa/4.0/)
