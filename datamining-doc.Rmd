@@ -3,6 +3,7 @@ title: "Algoritmos de clasificación en minería de datos"
 author: "David Charte"
 output:
   pdf_document:
+    number_sections: yes
     toc: yes
 ---
 
@@ -26,8 +27,6 @@ siguientes fases[^fayyad]:
 * Transformación: reducir número de variables, transformación del problema...
 * Minería: búsqueda de patrones de interés
 * Interpretación y visualización
-
-[^fayyad]: Fayyad, Usama; Piatetsky-Shapiro, Gregory; Smyth, Padhraic - [From Data Mining to Knowledge Discovery in Databases](http://www.kdnuggets.com/gpspubs/aimag-kdd-overview-1996-Fayyad.pdf)
 
 Nos centraremos en la fase del análisis de los datos 
 en sí para buscar significados, conocida como Minería de datos. Los 
@@ -101,8 +100,6 @@ instancias del dataset `bupa`[^bupa], que tiene 7 atributos en total
 (se han escogido dos para los ejes y el atributo de clase está
 representado por el color):
 
-[^bupa]: UCI Machine Learning Repository - [http://archive.ics.uci.edu/ml/datasets/Liver+Disorders](http://archive.ics.uci.edu/ml/datasets/Liver+Disorders)
-
 ```{r, echo=FALSE}
 bupa <- read.csv("datasets/bupa.csv",
                  col.names = c("mcv", "alkphos", "sgpt", "sgot", "gammagt", "drinks", "selector"))
@@ -121,8 +118,6 @@ dataset `iris`[^iris], que cuenta con 5 atributos, el último de los
 cuales se utiliza para separarlos en 3 clases. De nuevo, se
 representan dos de los atributos y el color diferencia las
 clases:
-
-[^iris]: UCI Machine Learning Repository - [http://archive.ics.uci.edu/ml/datasets/Iris](http://archive.ics.uci.edu/ml/datasets/Iris)
 
 ```{r, echo=F}
 plot(iris$Petal.Length, iris$Petal.Width, col = iris$Species, type = "p", pch = 20)
@@ -161,8 +156,6 @@ para cada dato nuevo. Además, es probable que se dé la
 situación en que algunas etiquetas estén relacionadas entre
 sí. Un buen algoritmo de clasificación deberá tener esto
 en cuenta, y no tratar cada etiqueta por separado.
-
-[^mulan]:Multilabel datasets - [http://mulan.sourceforge.net/datasets-mlc.html](http://mulan.sourceforge.net/datasets-mlc.html)
 
 Transformación de problemas
 ========================================================
@@ -259,21 +252,50 @@ combinación $L$ de etiquetas.
 Algoritmos de clasificación
 ==========================================
 
-## K-nearest neighbor (kNN)
+## K-nearest neighbors (kNN)
 
-El método de los $k$ vecinos más cercanos consiste en hallar
+Introducido en 1951[^fixhodges], el método de los $k$ vecinos 
+más cercanos consiste en hallar
 los primeros $k$ puntos de $F_1\times\dots\times F_k$ a menor
 distancia (para cierta distancia $d$, generalmente la euclídea)
 del nuevo dato a clasificar. Una vez encontrados estos puntos,
 se le otorga al nuevo dato la clase de la mayoría (esquema de
 votación).
 
-En el caso $k=1$, se puede visualizar fácilmente el método
-mediante un diagrama de Voronoi, que divide el plano en
+En el caso $k=1$, expresar matemáticamente el algoritmo es muy 
+sencillo; para un dato a clasificar $X$, la clase será la de la
+instancia más cercana a él por la distancia $d$:
+$$ N\!N(X) = \arg\!\min\limits_{Y\in D}d(X,(Y_1,\dots Y_{n-1}));\quad c(X) = (N\!N(X))_n\quad \forall X\in F_1\times\dots\times F_{n-1}$$
+Además, se puede visualizar fácilmente el método
+mediante un diagrama de Voronoi[^scpedia], que divide el plano en
 regiones que identifican al punto más cercano:
 
-$\includegraphics[width=8cm,height=8cm]{knn_voronoi.png}$  
-Diagrama de Voronoi obtenido de [Scholarpedia](http://scholarpedia.org/article/K-nearest_neighbor) (CC BY-NC-SA)
+$\includegraphics[width=7cm,height=7cm]{knn_voronoi.png}$  
+
+En el siguiente ejemplo[^ejknn] utilizamos el algoritmo kNN para
+clasificar datos del dataset `iris`. 
+
+> **Nota**: En el ejemplo se utiliza *validación cruzada* para
+> comprobar la precisión del clasificador generado. La validación
+> cruzada consiste en dividir el dataset en varias partes del
+> mismo tamaño, y utilizar todas menos una como dataset para el
+> algoritmo, y la restante como conjunto de test, es decir, para
+> comprobación de la capacidad de clasificación del algoritmo. El
+> procedimiento se repite utilizando una parte distinta como
+> conjunto de test en cada iteración.
+
+```{r, echo = F}
+# install.packages("RWeka")
+library(RWeka)
+```
+```{r}
+# Cargamos dataset
+iris <- read.arff(system.file("arff", "iris.arff", package = "RWeka"))
+# Generamos clasificador kNN con k = 10
+classifier <- IBk(class ~., data = iris, control = Weka_control(K = 10))
+# Evaluamos con validación cruzada
+evaluate_Weka_classifier(classifier, numFolds = 5)
+```
 
 ### Tipificación
 
@@ -294,17 +316,15 @@ según la distancia a la que estén. Por tanto, la clase del
 punto más cercano tendrá más importancia en la elección final
 que la del $k$-ésimo punto más cercano.
 
-[^dudani]: *The Distance-Weighted k-Nearest-Neighbor Rule* - Sahibsingh A. Dudani
-
 ### ML-kNN[^mlknn]
 
 ML-kNN es una adaptación del algoritmo kNN para problemas de
 clasificación multietiqueta. En este método, una vez 
 localizados los $k$ puntos más cercanos a una instancia de
-test $T$, construimos un vector de cuentas como sigue. Si 
-$N(T) = \{X_1, X_2, \dots X_k\}$ son los vecinos más cercanos
-a $T$, definimos la cuenta:
-$$ C(T) = \sum\limits_{i\in\{1,\dots k\}} (x_{i\ m+1}, x_{i\ m+2}, \dots x_{i\ n})$$
+test $Y$, construimos un vector de cuentas como sigue. Si 
+$kN\!N(Y) = \{X^{(1)}, X^{(2)}, \dots X^{(k)}\}$ son los vecinos 
+más cercanos a $Y$, definimos la cuenta:
+$$ C(Y) = \sum\limits_{X\in kN\!N(Y)} (X_{m+1}, X_{m+2}, \dots X_{n})$$
 
 De esta forma obtenemos un vector de $l$ elementos para los
 cuales, cuanto mayor sea el valor, mayor es la confianza de
@@ -312,13 +332,88 @@ que la instancia $T$ tenga las etiquetas asociadas. Para
 discriminar cuáles de las etiquetas se asignarán y cuáles
 no, ML-kNN utiliza una estimación *Maximum a posteriori*. 
 
-[^mlknn]: *ML-kNN: A Lazy Learning Approach to Multi-Label Learning* - Min-Ling Zhang, Zhi-Hua Zhou
+### Problemas en alta dimensionalidad
+Se puede comprobar que, bajo ciertas condiciones, al aumentar el número
+de dimensiones, dada una instancia, la diferencia entre la distancia de
+la instancia más cercana y la distancia a la más lejana tiende a cero[^beyer].
 
 ## Árboles de decisión
 Binaria+multiclase
 
-## Máquina vectorial de soporte (SVM)
-Binaria
+## Máquina de vectores de soporte (SVM)
+Las máquinas de vectores de soporte tienen su origen en la
+teoría de aprendizaje estadístico. En principio solo son capaces
+de tratar el problema de clasificación binaria. La idea básica de estos
+algoritmos es tratar de separar las instancias de las dos
+clases mediante un hiperplano de forma que la distancia que
+las separe sea la máxima posible. Los nuevos datos para los
+que haya que predecir la clase serán asignados a la que
+corresponda a la mitad del espacio (determinada por el
+hiperplano) a la que pertenezcan.
+
+$\includegraphics[width=7.4cm,height=8cm]{svm-hyperplanes.png}$  
+
+Por tanto, para un algoritmo de este tipo,
+cada instancia de un dataset representa un punto en un espacio de
+$n-1$ dimensiones (si tenemos $n$ atributos), y se pretende encontrar
+un hiperplano afín de la forma
+$$ H = \{x \in F_1\times\dots\times F_{n-1}: \left<w, x\right> - b = 0\} $$
+donde $w$ sea un vector ortogonal al hiperplano y $b$ un desplazamiento, 
+tal que tenga el máximo margen de distancia a cualquier punto. Este margen
+se define como
+$$ \delta^*=\min_{X=(x,y)\in D}\left\{d(x, H)\right\} = \min_{X=(x,y)\in D} ||\overrightarrow{x\ \pi_H(X)}||$$
+
+Los puntos que realizan este mínimo de distancia se denominan *vectores
+de soporte*.
+
+En lugar de tratar de optimizar el margen mediante las distancias a todos los
+puntos, se puede utilizar el desplazamiento para medir la separación entre
+los hiperplanos $\{x:\left<w,x\right> - b = 1\}, \{x:\left<w,x\right> - b = -1\}$
+(ver figura superior), de forma que solo tenemos que tratar de maximizar
+$\frac{1}{||w||}$, o equivalentemente, minimizar $||w||$, con las restricciones
+de separación de instancias de distintas clases.
+
+En el siguiente ejemplo utilizamos la función `svm` del paquete `e1071` de R
+para generar un modelo SVM lineal que separe una clase del dataset `iris` de las
+demás, atendiendo a dos de las características:
+
+```{r, echo=FALSE}
+library(e1071)
+```
+```{r}
+# Cargamos dataset integrado en R
+data(iris)
+# Nos quedamos con 2 características
+iris2 <- data.frame(Petal.Width = iris$Petal.Width,
+                    Petal.Length = iris$Petal.Length,
+                    Species = iris$Species)
+# Eliminamos una de las clases
+iris2$Species[iris2$Species == "virginica"] <- "versicolor"
+# Generamos un modelo de máquina de vectores de soporte
+model <- svm(Species~., data = iris2, kernel = "linear")
+# Mostramos un gráfico del modelo
+plot(model, iris2, grid = 200)
+```
+
+Los puntos marcados como `x` son los vectores de soporte utilizados para el
+modelo.
+
+### Funciones *kernel*[^wkbsvm]
+El algoritmo básico para SVM tiene la restricción de que genera únicamente
+modelos lineales para separar los datos. Para evitarla, se pueden 
+llevar los puntos del dataset a un espacio de más
+dimensiones, donde puedan ser linealmente separados, y utilizar la SVM en
+ese espacio. Una vez encontrado el hiperplano que los separa en ese espacio,
+se puede volver a transformar al espacio original, convirtiendolo en una
+superficie no lineal.
+
+Para llevar esto a cabo se utilizan funciones *kernel*, que son capaces de
+hallar los productos escalares en distintos espacios, sin necesidad de crearlos
+y transformar todo el dataset. Algunos ejemplos de funciones *kernel* son:
+
+* Kernel polinomial de grado $q$: $K(x_i, x_j) = (\left<x_i, x_j\right> + 1)^q$
+* Kernel gaussiano: $K(x_i, x_j) = e^{-\frac{||x_i-x_j||^2}{2\sigma^2}}$
+* Kernel sigmoide de desplazamiento $b$: $K(x_i, x_j) = tanh(a\left<x_i, x_j\right> + b)$
 
 ## RAkEL
 Multietiqueta
@@ -330,3 +425,20 @@ Multietiqueta
 [![CC BY-SA](ccbysa.png)](http://creativecommons.org/licenses/by-sa/4.0/)
 
 Esta obra se distribuye bajo una licencia [Creative Commons Atribución-CompartirIgual 4.0](http://creativecommons.org/licenses/by-sa/4.0/).
+
+
+[^fayyad]: Fayyad, Usama; Piatetsky-Shapiro, Gregory; Smyth, Padhraic - [*From Data Mining to Knowledge Discovery in Databases*](http://www.kdnuggets.com/gpspubs/aimag-kdd-overview-1996-Fayyad.pdf)
+
+[^bupa]: UCI Machine Learning Repository - [Liver Disorders](http://archive.ics.uci.edu/ml/datasets/Liver+Disorders)
+[^iris]: UCI Machine Learning Repository - [Iris](http://archive.ics.uci.edu/ml/datasets/Iris)
+[^mulan]: MULAN - [Multilabel datasets](http://mulan.sourceforge.net/datasets-mlc.html)
+
+[^scpedia]: Diagrama de Voronoi obtenido de [Scholarpedia](http://scholarpedia.org/article/K-nearest_neighbor) (CC BY-NC-SA)
+
+[^fixhodges]: Fix, E.; Hodges, J.L. - *Discriminatory analysis, nonparametric discrimination: Consistency properties*
+[^ejknn]: Wikibooks - [Data Mining Algorithms in R/Classification/kNN](https://en.wikibooks.org/wiki/Data_Mining_Algorithms_In_R/Classification/kNN#Execution_and_Results)
+[^dudani]: Dudani, Sahibsingh A. - *The Distance-Weighted k-Nearest-Neighbor Rule*
+[^mlknn]: Min-Ling Zhang, Zhi-Hua Zhou - *ML-kNN: A Lazy Learning Approach to Multi-Label Learning*
+[^beyer]: Beyer, K.; Goldstein, J; Ramakrishnan, R; Shaft. U - *When Is "Nearest Neighbor" Meaningful?*
+
+[^wkbsvm]: Wikibooks - [Data Mining Algorithms In R/Classification/SVM](https://en.wikibooks.org/wiki/Data_Mining_Algorithms_In_R/Classification/SVM#Algorithm)
