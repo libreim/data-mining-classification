@@ -3,6 +3,7 @@ title: "Algoritmos de clasificación en minería de datos"
 author: "David Charte"
 output:
   pdf_document:
+    fig_width: 7
     number_sections: yes
     toc: yes
 ---
@@ -100,7 +101,7 @@ instancias del dataset `bupa`[^bupa], que tiene 7 atributos en total
 (se han escogido dos para los ejes y el atributo de clase está
 representado por el color):
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.height=4}
 bupa <- read.csv("datasets/bupa.csv",
                  col.names = c("mcv", "alkphos", "sgpt", "sgot", "gammagt", "drinks", "selector"))
 plot(bupa$sgot, bupa$sgpt, col = bupa$selector + 1, pch = 20)
@@ -111,7 +112,7 @@ plot(bupa$sgot, bupa$sgpt, col = bupa$selector + 1, pch = 20)
 La clasificación multiclase añade la complejidad de que, en
 lugar de dos únicos valores para la característica que agrupa
 a las instancias, tendremos 3 o más. Esto significa que aunque
-$m$ se mantenga igual a $n-1$, tendremos $F_n = \{1,2,3\dots\}$.
+$m$ se mantenga igual a $n-1$, tendremos $F_n = \{1,2,3\dots l\}$.
 
 La nube de puntos siguiente representa los datos del conocido
 dataset `iris`[^iris], que cuenta con 5 atributos, el último de los
@@ -119,7 +120,7 @@ cuales se utiliza para separarlos en 3 clases. De nuevo, se
 representan dos de los atributos y el color diferencia las
 clases:
 
-```{r, echo=F}
+```{r, echo=F, fig.height=4}
 plot(iris$Petal.Length, iris$Petal.Width, col = iris$Species, type = "p", pch = 20)
 ```
 
@@ -338,7 +339,97 @@ de dimensiones, dada una instancia, la diferencia entre la distancia de
 la instancia más cercana y la distancia a la más lejana tiende a cero[^beyer].
 
 ## Árboles de decisión
-Binaria+multiclase
+Un árbol de decisión es una herramienta que permite tomar decisiones
+siguiendo unas condiciones en forma de árbol. Aplicado al problema de
+clasificación, generar un árbol de decisión nos permitiría asignar una
+clase a una nueva instancia basándonos en condiciones sobre sus otras
+características.
+
+Tenemos, por tanto, toda una familia de algoritmos capaces de generar
+árboles de decisión de distintas maneras. Entre ellos se encuentran
+ID3 (*Iterative Dichotomiser 3*)[^quinlan], C4.5, CART 
+(*Classification And Regression Tree*) y CHAID 
+(*CHi-squared Automatic Interaction Detector*). En general siguen el
+mismo procedimiento, pero aplicando diferentes medidas. Se distinguen
+dos fases que se van iterando, la selección de atributos, y la parada
+y selección de clase.
+
+### Selección de atributos
+En terminología de árboles, seleccionar un atributo implica crear un
+nodo interno. Por tanto, de este nodo partirán dos o más ramas que 
+crearán subconjuntos del dataset a partir de una condición sobre el
+atributo. Por esto, se pretende escoger siempre el atributo que más 
+información nos aporte sobre los datos, es decir, el que mejor los
+separe. Esto se mide a través de cálculos como la entropía ($H$) y la
+ganancia de información ($IG$)[^wkid3]:
+
+$$ H(S) = -\sum_{k \in \{1,\dots l\}} p(k)log_2 p(k); \quad S\subset D $$
+donde $l$ es el número de clases y $p(k)$ nos dice la proporción entre
+las instancias de $D$ con la $k$-ésima clase y el número total de instancias.
+
+$$ IG(i, S) = H(S) - \sum_{U\in s_i(S)} \frac{|U|}{|S|} H(U);\quad S\subset D, 1\leq i\leq n-1 $$
+donde $s_i(S)$ nos da los subconjuntos de $S$ resultantes de dividir
+$S$ mediante una condición sobre el $i$-ésimo atributo ($F_i$).
+
+Al añadir un nodo al árbol de decisión, ID3 y C4.5 escogen el atributo
+que maximice la ganancia de información obtenida. Otras medidas que se
+pueden usar son el índice de impureza de Gini (utilizado en CART) y el 
+ratio de ganancia de información.
+
+### Criterios de parada, selección de clase
+Al ramificar el árbol, se necesitan criterios para convertir un nodo
+en hoja del árbol. Entre ellos se contemplan:
+
+* Cuando todas las instancias del subconjunto de $D$ correspondiente
+  son de la misma clase. Se crea el nodo hoja y se le asigna la clase
+  a la que pertenecen las instancias.
+* Cuando no quedan atributos para ramificar el árbol, o ninguno de ellos
+  aporta ganancia de información. En ese caso, el
+  nodo hoja creado lleva la clase mayoritaria del subconjunto.
+* Cuando el subconjunto de $D$ es vacío. Se crea un nodo hoja con la
+  clase mayoritaria del subconjunto del nodo padre.
+
+En el ejemplo se muestra el árbol de decisión generado por el algoritmo
+de clasificación C4.5 (utilizando la implementación libre J48 de Weka).
+Observamos que el atributo `petalwidth` es el que más información aporta,
+ya que se utilizan tres umbrales sobre él para ramificar el árbol; además
+se usa una condición para `petallength` y ninguna sobre los otros dos
+atributos, `sepalwidth` y `sepallength`.
+
+<!--
+```{r, echo=FALSE}
+# install.packages("partykit")
+library(partykit)
+```
+-->
+```{r, dpi=400}
+# Cargamos dataset
+iris <- read.arff(system.file("arff", "iris.arff", package = "RWeka"))
+# Generamos clasificador C4.5 con parámetros por defecto
+classifier <- J48(class ~., data = iris)
+# Mostramos árbol de decisión
+plot(classifier)
+```
+
+### *Bagging* de árboles y Random Forest
+Cuando en un dataset hay muchas características, puede ser difícil
+generar un árbol que sea suficientemente pequeño para evitar
+el *overfitting* o sobreaprendizaje y que a la vez consiga describir
+al completo los datos. Para solucionarlo, se puede trabajar con 
+árboles de decisión que tomen menos características y menos instancias.
+
+Parte de esta idea se implementa en el *bagging* de árboles, que
+implica ejecutar varios algoritmos de árboles de decisión sobre
+un conjunto de muestras del dataset tomadas de forma aleatoria con
+reemplazamiento. Para predecir la clase de una nueva instancia, se
+utiliza un esquema de votación: se siguen todos los árboles y se
+elige la opción mayoritaria.
+
+El método Random Forest añade además el ir escogiendo subconjuntos
+aleatorios de las características, es decir, para cada árbol se 
+extrae aleatoriamente un subconjunto de ${1, 2, \dots n-1}$ y se le
+proporcionan instancias con únicamente esas características (siempre
+se proporciona la $n$-ésima característica para poder clasificar).
 
 ## Máquina de vectores de soporte (SVM)
 Las máquinas de vectores de soporte tienen su origen en la
@@ -415,11 +506,74 @@ y transformar todo el dataset. Algunos ejemplos de funciones *kernel* son:
 * Kernel gaussiano: $K(x_i, x_j) = e^{-\frac{||x_i-x_j||^2}{2\sigma^2}}$
 * Kernel sigmoide de desplazamiento $b$: $K(x_i, x_j) = tanh(a\left<x_i, x_j\right> + b)$
 
-## RAkEL
-Multietiqueta
+## Algoritmos para clasificación multietiqueta
+La clasificación multietiqueta es un problema que se comenzó a
+tratar por sí mismo muy recientemente. Algunos de los algoritmos más 
+utilizados en este ámbito se publicaron en 2007 (ML-kNN), 2008 (HOMER) 
+y 2011 (RAkEL). Esto implica que aún hay un largo camino por
+recorrer en cuanto a la clasificación multietiqueta, no solo
+alrededor del análisis de las instancias, sino también de las
+relaciones entre etiquetas por sí mismas.
 
-## HOMER
-Multietiqueta
+A continuación revisamos los algoritmos HOMER (*Hierarchy Of Multi-labEl leaRners*)
+y RAkEL (*RAndom k-labELsets*), ambos basados en la técnica de 
+transformación Label Powerset.
+
+### HOMER[^homer]
+En clasificación multietiqueta es frecuente encontrar una alta
+dimensionalidad del espacio de características, no solo eso, sino
+que además puede haber una cantidad grande de etiquetas, lo cual
+provoca que la cantidad de combinaciones posibles al clasificar un
+dato ascienda exponencialmente ($2^l$ con $l$ etiquetas).
+
+$\includegraphics[width=12cm,height=6.3cm]{homer-algorithm.png}$  
+
+Para lidiar con este problema el algoritmo HOMER propone construir
+una jerarquía de tareas de clasificación más simples, cada una
+tratando un número menor de etiquetas, en forma de árbol. Cada nodo
+interno del árbol se ramifica tantas veces como indique un
+parámetro $k$, y el reparto de etiquetas se realiza buscando juntar
+las que estén presentes en instancias más similares. Las instancias
+que quedan en cada nodo son las que contienen al menos una de las
+etiquetas correspondientes a ese nodo.
+
+El asunto más problemático en este planteamiento reside en el
+método a utilizar para distribuir las etiquetas de forma que reunan
+instancias similares entre sí. Para resolverlo, el algoritmo trata
+las etiquetas como si se tratase de un problema de *clustering*. Los
+autores proponen utilizar agrupamientos de etiquetas del mismo tamaño,
+para lo que se debe usar un algoritmo de *clustering* equilibrado.
+
+### RAkEL[^rakel]
+La estrategia de transformación Label Powerset presenta un problema
+de complejidad computacional. Al considerar cada posible combinación
+de etiquetas (*labelset*) como una clase, está generando un problema
+de clasificación multiclase de hasta $2^l$ clases. En la práctica son
+muchas menos clases, ya que los labelsets se pueden repetir, y no
+tienen por qué aparecer todos en el dataset. Sin embargo, sí que se
+puede dar que existan muchos labelsets con una sola ocurrencia, es decir,
+que solo exista una instancia con esa combinación de etiquetas. Esto
+dificulta el procesamiento necesario considerablemente.
+
+El algoritmo RAkEL propone utilizar subconjuntos aleatorios de tamaño
+$k$ del conjunto de etiquetas y entrenar clasificadores multietiqueta 
+para cada uno mediante Label Powerset.
+
+Por ejemplo, si tuviéramos $l = 6, k = 2$, RAkEL podría entrenar los
+siguientes clasificadores:
+
+$$ c_1: F_1\times\dots\times F_m \rightarrow F_1\times F_5 $$
+$$ c_2: F_1\times\dots\times F_m \rightarrow F_2\times F_3 $$
+$$ c_3: F_1\times\dots\times F_m \rightarrow F_4\times F_6 $$
+  
+Es decir, se habría empleado Label Powerset sobre $\{F_1,F_5\}$, 
+$\{F_2,F_3\}$ y $\{F_4,F_6\}$. De esta forma no se llegan a analizar
+todas las combinaciones posibles, pero el tiempo de procesamiento es
+significativamente menor (dependiendo del algoritmo que se utilice
+por debajo para clasificar).
+
+Además, existe una variante de RAkEL que permite solapar los subconjuntos
+de etiquetas, de forma que las etiquetas puedan aparecer en más de un clasificador.
 
 ***
 [![CC BY-SA](ccbysa.png)](http://creativecommons.org/licenses/by-sa/4.0/)
@@ -441,4 +595,10 @@ Esta obra se distribuye bajo una licencia [Creative Commons Atribución-Comparti
 [^mlknn]: Min-Ling Zhang, Zhi-Hua Zhou - *ML-kNN: A Lazy Learning Approach to Multi-Label Learning*
 [^beyer]: Beyer, K.; Goldstein, J; Ramakrishnan, R; Shaft. U - *When Is "Nearest Neighbor" Meaningful?*
 
+[^quinlan]: Quinlan, J.R. - *Induction of Decision Trees*
+[^wkid3]: Wikipedia - [ID3 Algorithm](http://en.wikipedia.org/wiki/ID3_algorithm#The_ID3_metrics)
+
 [^wkbsvm]: Wikibooks - [Data Mining Algorithms In R/Classification/SVM](https://en.wikibooks.org/wiki/Data_Mining_Algorithms_In_R/Classification/SVM#Algorithm)
+
+[^homer]: Tsoumakas, G.; Katakis, I.; Vlahavas, I. - *Effective and Efficient Multilabel Classification in Domains with Large Number of Labels*
+[^rakel]: Tsoumakas, G.; Katakis, I.; Vlahavas, I. - *Random k-Labelsets for Multi-Label Classification*
