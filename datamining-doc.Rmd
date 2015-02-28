@@ -8,6 +8,15 @@ output:
     toc: yes
 ---
 
+<!--
+```{r, echo=FALSE}
+if (!require(mldr)) install.packages("mldr")
+if (!require(partykit)) install.packages("partykit")
+if (!require(RWeka)) install.packages("RWeka")
+if (!require(e1071)) install.packages("e1071")
+```
+-->
+
 # Introducción a la minería de datos
 
 A día de hoy, se recopilan cantidades ingentes de datos en cada vez 
@@ -141,10 +150,9 @@ siendo de los más pequeños entre los multietiqueta, cuenta con
 78 características, 6 de las cuales son etiquetas.
 
 ```{r, echo=FALSE}
-# El paquete mldr no está disponible aún en CRAN.
 library(mldr)
 
-emotions <- mldr("datasets/emotions", use_xml = TRUE)
+emotions <- mldr("datasets/emotions")
 emotions$labels[,c(2,4)]
 ```
 
@@ -286,7 +294,6 @@ clasificar datos del dataset `iris`.
 > conjunto de test en cada iteración.
 
 ```{r, echo = F}
-# install.packages("RWeka")
 library(RWeka)
 ```
 ```{r}
@@ -398,7 +405,6 @@ atributos, `sepalwidth` y `sepallength`.
 
 <!--
 ```{r, echo=FALSE}
-# install.packages("partykit")
 library(partykit)
 ```
 -->
